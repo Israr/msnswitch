@@ -119,7 +119,7 @@ class Outlet(str, Enum):
     outlet_2 = "Outlet-2"
     outlet_uis = "UIS"
     both = "both"
-    o_uis = "1"
+    o_uis = "0"
     o_1 = "1"
     o_2 = "2"
     o_both = "3"
