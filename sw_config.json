@@ -1,0 +1,8 @@
+{
+  "default": {
+    "device_url": "http://192.168.128.161",
+    "username": "admin",
+    "password" : "password"
+  }
+}
+
