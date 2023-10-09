@@ -6,52 +6,25 @@ import requests
 import time
 import typer
 
-def get_request_creds(device_url, user, password):
-    login_payload = f"user={user}&password={password}"
-    login_url = f"{device_url}/goform/login"
-    response = requests.post(login_url, data=login_payload)
-    if response.status_code == 200:
-        cookies = response.cookies
-        index_url  = f"{device_url}/index.asp"
-        index_response = requests.get(index_url, cookies=cookies)
-        if index_response.status_code != 200:
-            print("cannot get index.asp")
-            return
-        pattern = r'value="([^"]+)"'
-        match = re.search(pattern, index_response.text[-100:])
-        if match:
-            csrf_token = match.group(1)
-            return (csrf_token, cookies)
-        else:
-            print("Cannot find csrf_token")
-    else:
-        print("Login failed with status code:", response.status_code)
-    return (None, None)
+class State(str, Enum):
+    on = "on"
+    off = "off"
+    toggle = "toggle"
+    power_cycle = "power_cycle"
+    s_off = "0"
+    s_on = "1"
+    s_toggle = "2"
+    s_powercycle = "3"
 
-def set_outlet(device_url, outlet, status, user, password):
-    (token, cookies) = get_request_creds(device_url, user, password)
-    if token is not None and cookies is not None:
-        t = int(time.time()*1000)
-        control_url = f"{device_url}/cgi-bin/control.cgi?target={outlet}&control={status}&time={t}&csrftoken={token}"
-        control_response = requests.get(control_url, cookies=cookies)
-        pattern = r'<outlet_status>([^<]+),([^<]+)</outlet_status>'
-        match = re.search(pattern, control_response.text)
-        if match:
-            print(f"{match.group(1)}, {match.group(2)}")
-
-def get_outlet_state(device_url, user, password):
-    (token, cookies) = get_request_creds(device_url, user, password)
-    if token is not None:
-        control_url = f"{device_url}/xml/outlet_status.xml?csrftoken={token}"
-        control_response = requests.get(control_url, cookies=cookies)
-        pattern = r'<outlet_status>([^<]+),([^<]+)</outlet_status>'
-        match = re.search(pattern, control_response.text)
-        if match:
-            print(f"{match.group(1)}, {match.group(2)}")
-        else:
-            print("no matched")
-    return
-
+class Outlet(str, Enum):
+    outlet_1 = "Outlet-1"
+    outlet_2 = "Outlet-2"
+    outlet_uis = "UIS"
+    both = "both"
+    o_uis = "0"
+    o_1 = "1"
+    o_2 = "2"
+    o_both = "3"
 
 class SWConfig:
     def __init__(self, fname="sw_config.json", profile="default"):
@@ -103,26 +76,52 @@ class SWConfig:
         else:
             return self.creds[self.profile]["device_url"]
 
+def get_request_creds(device_url, user, password):
+    login_payload = f"user={user}&password={password}"
+    login_url = f"{device_url}/goform/login"
+    response = requests.post(login_url, data=login_payload)
+    if response.status_code == 200:
+        cookies = response.cookies
+        index_url  = f"{device_url}/index.asp"
+        index_response = requests.get(index_url, cookies=cookies)
+        if index_response.status_code != 200:
+            print("cannot get index.asp")
+            return
+        pattern = r'value="([^"]+)"'
+        match = re.search(pattern, index_response.text[-100:])
+        if match:
+            csrf_token = match.group(1)
+            return (csrf_token, cookies)
+        else:
+            print("Cannot find csrf_token")
+    else:
+        print("Login failed with status code:", response.status_code)
+    return (None, None)
 
-class State(str, Enum):
-    on = "on"
-    off = "off"
-    toggle = "toggle"
-    power_cycle = "power_cycle"
-    s_off = "0"
-    s_on = "1"
-    s_toggle = "2"
-    s_powercycle = "3"
+def set_outlet(device_url, outlet, status, user, password):
+    (token, cookies) = get_request_creds(device_url, user, password)
+    if token is not None and cookies is not None:
+        t = int(time.time()*1000)
+        control_url = f"{device_url}/cgi-bin/control.cgi?target={outlet}&control={status}&time={t}&csrftoken={token}"
+        control_response = requests.get(control_url, cookies=cookies)
+        pattern = r'<outlet_status>([^<]+),([^<]+)</outlet_status>'
+        match = re.search(pattern, control_response.text)
+        if match:
+            print(f"{match.group(1)}, {match.group(2)}")
 
-class Outlet(str, Enum):
-    outlet_1 = "Outlet-1"
-    outlet_2 = "Outlet-2"
-    outlet_uis = "UIS"
-    both = "both"
-    o_uis = "0"
-    o_1 = "1"
-    o_2 = "2"
-    o_both = "3"
+def get_outlet_state(device_url, user, password):
+    (token, cookies) = get_request_creds(device_url, user, password)
+    if token is not None:
+        control_url = f"{device_url}/xml/outlet_status.xml?csrftoken={token}"
+        control_response = requests.get(control_url, cookies=cookies)
+        pattern = r'<outlet_status>([^<]+),([^<]+)</outlet_status>'
+        match = re.search(pattern, control_response.text)
+        if match:
+            print(f"{match.group(1)}, {match.group(2)}")
+        else:
+            print("no matched")
+    return
+
 
 def get_state(s):
     state_dict = {"on": "1", "off": "0", "toggle": "2", "power_cycle": "3"}
